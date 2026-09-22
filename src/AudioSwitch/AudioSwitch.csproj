@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- 允许使用 Windows Forms 的 NotifyIcon（系统托盘图标）组件 -->
+    <UseWindowsForms>true</UseWindowsForms>
+
+    <!-- 软件信息与版本号 -->
+    <AssemblyName>AudioSwitch</AssemblyName>
+    <RootNamespace>AudioSwitch</RootNamespace>
+    <Version>1.0.1</Version>
+    <Product>AudioSwitch</Product>
+    <Description>音频设备快速切换工具</Description>
+    <Authors>AudioSwitch</Authors>
+    <Copyright>Copyright © 2026</Copyright>
+
+    <!-- 应用图标（exe 文件和窗口显示的图标） -->
+    <ApplicationIcon>Assets/app.ico</ApplicationIcon>
+
+    <!-- 发布参数：单文件、框架依赖、不带 pdb -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+  <!-- 把图标文件作为资源一起编译 -->
+  <ItemGroup>
+    <Resource Include="Assets/app.ico" />
+  </ItemGroup>
+
+</Project>
