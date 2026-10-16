@@ -4,10 +4,10 @@ AppName=AudioSwitch
 ; 版本号唯一源：src/AudioSwitch/AudioSwitch.csproj 的 <Version>
 ; 用 build.ps1 打包时会自动注入；手工编译则改这里的回退值
 #ifndef AppVersion
-  #define AppVersion "1.0.1"
+  #define AppVersion "1.1.0"
 #endif
 #ifndef AppVersionFull
-  #define AppVersionFull "1.0.1.0"
+  #define AppVersionFull "1.1.0.0"
 #endif
 AppVersion={#AppVersion}
 AppPublisher=AudioSwitch

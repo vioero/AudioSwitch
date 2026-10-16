@@ -12,7 +12,7 @@
     <!-- 软件信息与版本号 -->
     <AssemblyName>AudioSwitch</AssemblyName>
     <RootNamespace>AudioSwitch</RootNamespace>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Product>AudioSwitch</Product>
     <Description>音频设备快速切换工具</Description>
     <Authors>AudioSwitch</Authors>
