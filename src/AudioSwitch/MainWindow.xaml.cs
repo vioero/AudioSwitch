@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        SourceInitialized += OnSourceInitialized;   // 修正最大化铺满屏幕问题（见 WmGetMinMaxInfo）
         SetupDeviceService();
         SetupTrayIcon();
         SetupHotkeys();
@@ -286,6 +287,59 @@ public partial class MainWindow : Window
     }
 
     // ==================== 窗口标题栏按钮 ====================
+
+    /// <summary>
+    /// HwndSource 就绪后挂窗口过程钩子。
+    /// WindowChrome 无边框窗口最大化时按“整屏 + 边框外扩”计算，不避让任务栏，
+    /// 导致窗口底部约 55px 落在任务栏区域——底部“开机自启动 / 设置”底栏被完全遮住。
+    /// </summary>
+    private void OnSourceInitialized(object? sender, EventArgs e)
+    {
+        var source = (System.Windows.Interop.HwndSource)PresentationSource.FromVisual(this)!;
+        source.AddHook(WndProc);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        const int WM_GETMINMAXINFO = 0x0024;
+        if (msg == WM_GETMINMAXINFO)
+        {
+            WmGetMinMaxInfo(hwnd, lParam);
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// 把最大化矩形限制到窗口所在显示器的工作区（避让任务栏，支持任务栏在任意边缘/多显示器）。
+    /// </summary>
+    private void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+    {
+        var mmi = System.Runtime.InteropServices.Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        var working = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;
+
+        mmi.ptMaxPosition.x = working.Left;
+        mmi.ptMaxPosition.y = working.Top;
+        mmi.ptMaxSize.x = working.Width;
+        mmi.ptMaxSize.y = working.Height;
+        mmi.ptMinTrackSize.x = (int)MinWidth;
+        mmi.ptMinTrackSize.y = (int)MinHeight;
+
+        System.Runtime.InteropServices.Marshal.StructureToPtr(mmi, lParam, true);
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT { public int x, y; }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
 
     private void TitleBar_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
