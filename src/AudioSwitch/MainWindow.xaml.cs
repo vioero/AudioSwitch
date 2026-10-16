@@ -140,14 +140,20 @@ public partial class MainWindow : Window
         _hotkeyManager.HotkeyFailed += msg => Dispatcher.Invoke(() => _trayService?.ShowBalloon("快捷键不可用", msg));
         _hotkeyManager.CycleRequested += (_, args) =>
         {
-            // 以设备服务的实际在线设备为准循环，不依赖当前显示的角色
-            var devices = args.DeviceType == DeviceType.Microphone ? _deviceService.Microphones : _deviceService.Speakers;
+            // 以设备服务的实际在线设备为准循环，不依赖当前显示的角色。
+            // 循环顺序必须用系统枚举顺序：展示时"默认设备置顶"只是视觉效果，
+            // 若按展示顺序循环，当前设备恒在第一位，切换只会在第一、二项之间
+            // 振荡，永远轮不到后续设备（用户实测反馈）。
+            var devices = args.DeviceType == DeviceType.Microphone
+                ? _deviceService.MicrophonesEnumOrder
+                : _deviceService.SpeakersEnumOrder;
             var connected = devices.Where(d => d.IsConnected).ToList();
             if (connected.Count <= 1) return;
 
             var defaultId = args.DeviceType == DeviceType.Microphone
                 ? _deviceService.DefaultMicId
                 : _deviceService.DefaultSpeakerId;
+            // 当前默认设备不在在线列表中时 FindIndex 返回 -1，取模后落到第一项
             int index = connected.FindIndex(d => d.Id == defaultId);
             var next = connected[(index + 1 + connected.Count) % connected.Count];
 
@@ -419,10 +425,20 @@ public partial class MainWindow : Window
             var s = SettingsManager.Current;
             s.WindowMaximized = WindowState == WindowState.Maximized;
             var bounds = WindowState == WindowState.Normal ? new System.Windows.Rect(Left, Top, Width, Height) : RestoreBounds;
-            s.WindowLeft = bounds.Left;
-            s.WindowTop = bounds.Top;
-            s.WindowWidth = bounds.Width;
-            s.WindowHeight = bounds.Height;
+
+            // WPF 在窗口隐藏/最小化/未渲染等状态下，Left/Top/RestoreBounds 可能返回
+            // NaN 或 Infinity。直接写入会让 JSON 序列化整体失败（设置保存链报废，
+            // 快捷键/主题等修改全部无法落盘），必须先校验有限性。
+            if (double.IsFinite(bounds.Left) && double.IsFinite(bounds.Top) &&
+                double.IsFinite(bounds.Width) && double.IsFinite(bounds.Height) &&
+                bounds.Width > 0 && bounds.Height > 0)
+            {
+                s.WindowLeft = bounds.Left;
+                s.WindowTop = bounds.Top;
+                s.WindowWidth = bounds.Width;
+                s.WindowHeight = bounds.Height;
+            }
+
             SettingsManager.Save();
         }
         catch (Exception ex)

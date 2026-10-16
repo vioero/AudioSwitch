@@ -27,6 +27,7 @@ public partial class TrayMenuWindow : Window
 {
     private readonly DeviceService _deviceService;
     private DateTime _shownAtUtc = DateTime.MinValue;
+    private bool _isClosing = false;   // 修复卡死：关闭过程中禁止重入 Close()
 
     /// <summary>用户在菜单中选择了某台设备（调用方负责设为默认；已保证在线）。</summary>
     public event Action<string>? DeviceSelected;
@@ -72,8 +73,25 @@ public partial class TrayMenuWindow : Window
         catch (Exception ex)
         {
             Logger.Error("显示托盘菜单失败", ex);
-            try { Close(); } catch { }
+            CloseMenu();
         }
+    }
+
+    /// <summary>
+    /// 统一的菜单关闭入口。
+    /// 背景：窗口销毁时激活会转移到其他窗口，必然触发一次 Deactivated；
+    /// 若此时 Window_Deactivated 再次调用 Close()，WPF 的 InternalClose 会因
+    /// VerifyNotClosing() 重入保护抛出异常，异常在窗口销毁路径中中断关闭流程，
+    /// 导致 UI 线程永久卡死（整个软件无响应，托盘双击无效）。
+    /// 防护：_isClosing 标志 + 退订 Deactivated + try/catch 兜底，三重保险。
+    /// </summary>
+    private void CloseMenu()
+    {
+        if (_isClosing) return;
+        _isClosing = true;
+        Deactivated -= Window_Deactivated;
+        try { Close(); }
+        catch (Exception ex) { Logger.Warn($"关闭托盘菜单时出现异常: {ex.Message}"); }
     }
 
     /// <summary>按设备数据重建两个分区（每次打开前调用，保证读到最新状态）。</summary>
@@ -263,18 +281,18 @@ public partial class TrayMenuWindow : Window
     {
         if (!row.IsConnected) return; // 离线行已禁用，双保险
         DeviceSelected?.Invoke(row.Id);
-        Close();
+        CloseMenu();
     }
 
     private void OpenWindowBtn_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        CloseMenu();
         OpenWindowRequested?.Invoke();
     }
 
     private void ExitBtn_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        CloseMenu();
         ExitRequested?.Invoke();
     }
 
@@ -282,7 +300,7 @@ public partial class TrayMenuWindow : Window
     {
         if (e.Key == Key.Escape)
         {
-            Close();
+            CloseMenu();
             e.Handled = true;
             return;
         }
@@ -303,6 +321,6 @@ public partial class TrayMenuWindow : Window
     {
         // 激活过程可能有瞬态失活：开启动画期内忽略，避免菜单自己闪退
         if ((DateTime.UtcNow - _shownAtUtc).TotalMilliseconds < 400) return;
-        Close();
+        CloseMenu();
     }
 }

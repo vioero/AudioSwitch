@@ -12,6 +12,11 @@ public sealed class DeviceService : IDisposable
     private readonly object _lock = new();
     private List<AudioDevice> _microphones = new();
     private List<AudioDevice> _speakers = new();
+    // 系统枚举顺序副本（未做"默认置顶"展示排序）：快捷键循环按此顺序轮转。
+    // 展示排序只影响视觉，若循环也按展示顺序，当前设备永远排在第一位，
+    // 切换只会在第一、二项之间振荡，永远轮不到后面的设备。
+    private List<AudioDevice> _microphonesEnumOrder = new();
+    private List<AudioDevice> _speakersEnumOrder = new();
     private string? _defaultMicId;
     private string? _defaultSpeakerId;
     private System.Threading.Timer? _refreshTimer;
@@ -41,6 +46,23 @@ public sealed class DeviceService : IDisposable
     public List<AudioDevice> Speakers
     {
         get { lock (_lock) return new List<AudioDevice>(_speakers); }
+    }
+
+    /// <summary>
+    /// 获取麦克风的系统枚举顺序（线程安全，返回副本；不含展示用的"默认置顶"排序）。
+    /// 快捷键循环专用：保证从当前设备按枚举顺序向下轮转、末位回绕到首位。
+    /// </summary>
+    public List<AudioDevice> MicrophonesEnumOrder
+    {
+        get { lock (_lock) return new List<AudioDevice>(_microphonesEnumOrder); }
+    }
+
+    /// <summary>
+    /// 获取音箱的系统枚举顺序（线程安全，返回副本；不含展示用的"默认置顶"排序）。
+    /// </summary>
+    public List<AudioDevice> SpeakersEnumOrder
+    {
+        get { lock (_lock) return new List<AudioDevice>(_speakersEnumOrder); }
     }
 
     /// <summary>
@@ -102,7 +124,7 @@ public sealed class DeviceService : IDisposable
         {
             try
             {
-                var (mics, speakers, defaultMicId, defaultSpeakerId) = BuildDeviceLists();
+                var (mics, speakers, micsEnum, speakersEnum, defaultMicId, defaultSpeakerId) = BuildDeviceLists();
                 bool changed;
                 lock (_lock)
                 {
@@ -114,6 +136,8 @@ public sealed class DeviceService : IDisposable
 
                     _microphones = mics;
                     _speakers = speakers;
+                    _microphonesEnumOrder = micsEnum;
+                    _speakersEnumOrder = speakersEnum;
                     _defaultMicId = defaultMicId;
                     _defaultSpeakerId = defaultSpeakerId;
                 }
@@ -147,11 +171,13 @@ public sealed class DeviceService : IDisposable
 
         try
         {
-            var (mics, speakers, defaultMicId, defaultSpeakerId) = BuildDeviceLists();
+            var (mics, speakers, micsEnum, speakersEnum, defaultMicId, defaultSpeakerId) = BuildDeviceLists();
             lock (_lock)
             {
                 _microphones = mics;
                 _speakers = speakers;
+                _microphonesEnumOrder = micsEnum;
+                _speakersEnumOrder = speakersEnum;
                 _defaultMicId = defaultMicId;
                 _defaultSpeakerId = defaultSpeakerId;
             }
@@ -171,8 +197,9 @@ public sealed class DeviceService : IDisposable
     /// 使用元数据缓存，只有新设备才读 COM 属性，已有设备直接复用缓存。
     /// 修复 L4：MMDevice 为 IDisposable，必须逐个释放。
     /// 修复 M1：缓存访问统一在 _lock 下进行。
+    /// 同时返回两份顺序：展示顺序（默认置顶）与系统枚举顺序（快捷键循环用）。
     /// </summary>
-    private (List<AudioDevice> mics, List<AudioDevice> speakers, string? defaultMicId, string? defaultSpeakerId) BuildDeviceLists()
+    private (List<AudioDevice> mics, List<AudioDevice> speakers, List<AudioDevice> micsEnum, List<AudioDevice> speakersEnum, string? defaultMicId, string? defaultSpeakerId) BuildDeviceLists()
     {
         var mics = new List<AudioDevice>();
         var speakers = new List<AudioDevice>();
@@ -212,9 +239,14 @@ public sealed class DeviceService : IDisposable
         try { using var mic = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia); defaultMicId = mic?.ID; } catch { }
         try { using var spk = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia); defaultSpeakerId = spk?.ID; } catch { }
 
+        // 快捷键循环顺序：先留存系统枚举顺序的副本，再做展示排序。
+        // 展示排序（默认置顶）会改变设备在列表中的位置，不能直接用于循环切换。
+        var micsEnum = new List<AudioDevice>(mics);
+        var speakersEnum = new List<AudioDevice>(speakers);
+
         // 展示排序：正在使用的设备置顶，其次在线设备，离线设备沉底；
         // 同组内保持系统枚举顺序（OrderBy 为稳定排序）。
-        // 主窗口列表、托盘菜单、快捷键循环都读这两个列表，在此排一次全局生效。
+        // 主窗口列表、托盘菜单读展示顺序；快捷键循环读枚举顺序（见上）。
         mics = SortForDisplay(mics, defaultMicId);
         speakers = SortForDisplay(speakers, defaultSpeakerId);
 
@@ -225,7 +257,7 @@ public sealed class DeviceService : IDisposable
             foreach (var id in staleIds) _metadataCache.Remove(id);
         }
 
-        return (mics, speakers, defaultMicId, defaultSpeakerId);
+        return (mics, speakers, micsEnum, speakersEnum, defaultMicId, defaultSpeakerId);
     }
 
     /// <summary>
