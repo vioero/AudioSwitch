@@ -1,6 +1,4 @@
 using System.Windows;
-using System.Windows.Media;
-using AudioSwitch.Services;
 
 namespace AudioSwitch;
 
@@ -24,32 +22,8 @@ public partial class ClosePromptWindow : Window
     public ClosePromptWindow()
     {
         InitializeComponent();
-        ApplyTheme();
-    }
-
-    /// <summary>
-    /// 根据当前主题设置，更新弹窗颜色（浅色/深色）。
-    /// 修复 S3：复用 ThemeService.IsDark，避免自行读注册表路径出错。
-    /// </summary>
-    private void ApplyTheme()
-    {
-        bool dark = ThemeService.IsDark(SettingsManager.Current.Theme);
-        SetBrush("WindowBg", dark ? "#1E1E1E" : "#F3F3F3");
-        SetBrush("MainText", dark ? "#F0F0F0" : "#1B1B1B");
-        SetBrush("SubText",  dark ? "#B0B0B0" : "#666666");
-    }
-
-    private void SetBrush(string key, string hex)
-    {
-        try
-        {
-            var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
-            Resources[key] = new SolidColorBrush(color);
-        }
-        catch (Exception ex)
-        {
-            Logger.Error($"颜色解析失败 {key}={hex}", ex);
-        }
+        // v2.0：颜色全部走 App 级主题字典（Themes/Colors.*.xaml），深浅色自动跟随，
+        // 不再需要本地资源与手动 ApplyTheme。
     }
 
     private void TrayButton_Click(object sender, RoutedEventArgs e)

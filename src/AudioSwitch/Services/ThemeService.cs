@@ -1,46 +1,50 @@
 using System.Windows;
 using System.Windows.Media;
+// 项目同时启用 WPF 与 WinForms 隐式 using，Application 需显式指向 WPF 的
+using Application = System.Windows.Application;
 
 namespace AudioSwitch.Services;
 
 /// <summary>
 /// 主题管理服务：负责浅色/深色主题的切换。
-/// 通过替换 DynamicResource 里的颜色画刷和渐变，实现全界面主题跟随。
+/// v2.0 起改为整体替换 App 资源里的颜色 ResourceDictionary（Themes/Colors.*.xaml），
+/// 而不是逐个往 window.Resources 里塞画刷——后者在 DynamicResource 已解析过的
+/// 场景下容易漏刷新（见 UI设计方案.md 7.1）。
 /// </summary>
 public static class ThemeService
 {
+    private const string LightDictionary = "Themes/Colors.Light.xaml";
+    private const string DarkDictionary = "Themes/Colors.Dark.xaml";
+
     /// <summary>
-    /// 根据当前设置切换浅色/深色主题，替换窗口资源里的颜色画刷和渐变。
+    /// 根据当前设置切换浅色/深色主题：替换 App 级 MergedDictionaries 中的颜色字典。
+    /// 界面所有 DynamicResource 引用会自动跟随刷新。
     /// </summary>
-    public static void Apply(Window window)
+    public static void Apply()
     {
         try
         {
-            var theme = SettingsManager.Current.Theme;
-            bool dark = IsDark(theme);
+            var app = Application.Current;
+            if (app == null) return;
 
-            // 纯色资源
-            var newBrushes = new Dictionary<string, SolidColorBrush>
+            var dark = IsDark(SettingsManager.Current.Theme);
+            var target = dark ? DarkDictionary : LightDictionary;
+
+            var dictionaries = app.Resources.MergedDictionaries;
+            for (int i = dictionaries.Count - 1; i >= 0; i--)
             {
-                ["WindowBg"]      = MakeBrush(dark ? "#1E1E1E" : "#F3F3F3"),
-                ["PanelBg"]       = MakeBrush(dark ? "#1E1E1E" : "#F3F3F3"),
-                ["CardBg"]        = MakeBrush(dark ? "#2D2D2D" : "#FFFFFF"),
-                ["CardBorder"]    = MakeBrush(dark ? "#3A3A3A" : "#E8E8E8"),
-                ["SettingCardBg"] = MakeBrush(dark ? "#2D2D2D" : "#FFFFFF"),
-                ["MainText"]      = MakeBrush(dark ? "#F0F0F0" : "#1B1B1B"),
-                ["SubText"]       = MakeBrush(dark ? "#999999" : "#888888"),
-                ["DisabledText"]  = MakeBrush(dark ? "#555555" : "#B0B0B0"),
-                ["HoverBg"]       = MakeBrush(dark ? "#3D3D3D" : "#E9E9E9"),
-                ["InputFieldBg"]  = MakeBrush(dark ? "#3D3D3D" : "#F5F5F5"),
-            };
-            foreach (var kv in newBrushes)
-                window.Resources[kv.Key] = kv.Value;
+                var source = dictionaries[i].Source?.OriginalString ?? string.Empty;
+                if (source.EndsWith("Colors.Light.xaml", StringComparison.OrdinalIgnoreCase) ||
+                    source.EndsWith("Colors.Dark.xaml", StringComparison.OrdinalIgnoreCase))
+                {
+                    dictionaries.RemoveAt(i);
+                }
+            }
 
-            // 渐变资源（从上到下，subtle depth 感）
-            var topColor = MakeColor(dark ? "#1E1E1E" : "#F3F3F3");
-            var bottomColor = MakeColor(dark ? "#161616" : "#E8E8E8");
-            var gradient = new LinearGradientBrush(topColor, bottomColor, new System.Windows.Point(0, 0), new System.Windows.Point(0, 1));
-            window.Resources["WindowBgGradient"] = gradient;
+            dictionaries.Add(new ResourceDictionary
+            {
+                Source = new Uri(target, UriKind.Relative)
+            });
         }
         catch (Exception ex)
         {
@@ -65,16 +69,5 @@ public static class ThemeService
             catch { return false; }
         }
         return theme == ThemeMode.Dark;
-    }
-
-    private static SolidColorBrush MakeBrush(string hex)
-    {
-        var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
-        return new SolidColorBrush(color);
-    }
-
-    private static System.Windows.Media.Color MakeColor(string hex)
-    {
-        return (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
     }
 }

@@ -11,7 +11,7 @@ namespace AudioSwitch.Services;
 /// </summary>
 public sealed class SettingsPanelManager
 {
-    private const double DrawerWidth = 380;  // 5.1：抽屉宽度统一为常量
+    private const double DrawerWidth = 340;  // 5.1：抽屉宽度统一为常量（与 MainWindow.xaml 的 Width/TranslateTransform 保持一致）
     private readonly FrameworkElement _settingsPanel;
     private readonly FrameworkElement _overlay;
     private readonly Action _onApplyTheme;
@@ -34,6 +34,11 @@ public sealed class SettingsPanelManager
     public HotkeyConfig SpeakerHotkey => _speakerHotkey;
     public bool IsRecordingMic => _isRecordingMic;
     public bool IsRecordingSpeaker => _isRecordingSpeaker;
+
+    /// <summary>
+    /// 抽屉当前是否处于打开状态（Esc 关闭流程判断用）。
+    /// </summary>
+    public bool IsPanelOpen => _isPanelOpen;
 
     public SettingsPanelManager(
         FrameworkElement settingsPanel,
@@ -288,6 +293,16 @@ public sealed class SettingsPanelManager
         _overlay.Visibility = Visibility.Visible;
         _settingsPanel.Visibility = Visibility.Visible;
         var transform = (TranslateTransform)_settingsPanel.RenderTransform;
+
+        // 取消可能仍在进行的关闭动画，避免它的 Completed 回调把刚打开的抽屉又关掉
+        transform.BeginAnimation(TranslateTransform.XProperty, null);
+
+        if (MotionService.IsReducedMotion)
+        {
+            transform.X = 0;
+            return;
+        }
+
         var anim = new DoubleAnimation(0, TimeSpan.FromMilliseconds(250))
         { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } };
         transform.BeginAnimation(TranslateTransform.XProperty, anim);
@@ -298,10 +313,22 @@ public sealed class SettingsPanelManager
         if (!_isPanelOpen) return;
         _isPanelOpen = false;
         var transform = (TranslateTransform)_settingsPanel.RenderTransform;
+
+        if (MotionService.IsReducedMotion)
+        {
+            transform.BeginAnimation(TranslateTransform.XProperty, null);
+            transform.X = DrawerWidth;
+            _settingsPanel.Visibility = Visibility.Collapsed;
+            _overlay.Visibility = Visibility.Collapsed;
+            return;
+        }
+
         var anim = new DoubleAnimation(DrawerWidth, TimeSpan.FromMilliseconds(200))
         { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn } };
         anim.Completed += (_, _) =>
         {
+            // 关闭动画播放期间又被打开（_isPanelOpen 已置回 true）时不要隐藏
+            if (_isPanelOpen) return;
             _settingsPanel.Visibility = Visibility.Collapsed;
             _overlay.Visibility = Visibility.Collapsed;
         };

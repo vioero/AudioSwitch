@@ -4,6 +4,15 @@
              xmlns:local="clr-namespace:AudioSwitch"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- 字号字重（Controls.xaml 以 StaticResource 引用，必须先合并） -->
+                <ResourceDictionary Source="Themes/Typography.xaml"/>
+                <!-- 组件样式（颜色走 DynamicResource，运行时跟随颜色字典切换） -->
+                <ResourceDictionary Source="Themes/Controls.xaml"/>
+                <!-- 颜色令牌：ThemeService 会在运行时整体替换为另一个主题字典 -->
+                <ResourceDictionary Source="Themes/Colors.Light.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

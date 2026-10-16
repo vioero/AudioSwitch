@@ -1,0 +1,59 @@
+<Window x:Class="AudioSwitch.TrayMenuWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="AudioSwitch 菜单"
+        Width="320" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="{x:Null}"
+        ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
+        WindowStartupLocation="Manual"
+        Deactivated="Window_Deactivated"
+        PreviewKeyDown="Window_PreviewKeyDown">
+
+    <!--
+      托盘右键菜单：与主界面共用设计令牌（BgSurface / BorderHairline / AccentText / StatusDanger）。
+      Margin 给投影留空间；窗口背景为 null，透明区域点击穿透（点到外面即关闭菜单）。
+    -->
+    <Border x:Name="FlyoutRoot" Margin="10" CornerRadius="10"
+            Background="{DynamicResource BgSurface}"
+            BorderBrush="{DynamicResource BorderHairline}" BorderThickness="1">
+        <Border.RenderTransform>
+            <TranslateTransform x:Name="SlideTransform" Y="6"/>
+        </Border.RenderTransform>
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="14" ShadowDepth="2" Direction="270" Opacity="0.30" Color="#1A1D21"/>
+        </Border.Effect>
+
+        <StackPanel Margin="6,5">
+            <!-- 麦克风区 -->
+            <TextBlock x:Name="MicHeaderText" Text="麦克风" Style="{StaticResource TextCaption}" Margin="8,7,8,5"/>
+            <ListBox x:Name="MicList" Background="Transparent" BorderThickness="0" Padding="0"
+                     MaxHeight="204"
+                     ItemContainerStyle="{StaticResource TrayRowStyle}"
+                     ItemTemplate="{StaticResource TrayRowTemplate}"
+                     MouseLeftButtonUp="DeviceList_MouseLeftButtonUp"/>
+            <TextBlock x:Name="MicEmpty" Text="（无麦克风设备）" Style="{StaticResource TextMeta}"
+                       Margin="10,4,10,6" Visibility="Collapsed"/>
+
+            <Border Height="1" Background="{DynamicResource BorderHairline}" Margin="6,7"/>
+
+            <!-- 音箱区 -->
+            <TextBlock x:Name="SpeakerHeaderText" Text="音箱" Style="{StaticResource TextCaption}" Margin="8,7,8,5"/>
+            <ListBox x:Name="SpeakerList" Background="Transparent" BorderThickness="0" Padding="0"
+                     MaxHeight="204"
+                     ItemContainerStyle="{StaticResource TrayRowStyle}"
+                     ItemTemplate="{StaticResource TrayRowTemplate}"
+                     MouseLeftButtonUp="DeviceList_MouseLeftButtonUp"/>
+            <TextBlock x:Name="SpeakerEmpty" Text="（无音箱设备）" Style="{StaticResource TextMeta}"
+                       Margin="10,4,10,6" Visibility="Collapsed"/>
+
+            <Border Height="1" Background="{DynamicResource BorderHairline}" Margin="6,7"/>
+
+            <!-- 动作区 -->
+            <Button x:Name="OpenWindowBtn" Content="打开主窗口" Style="{StaticResource TrayActionStyle}"
+                    Click="OpenWindowBtn_Click"/>
+            <Button x:Name="ExitBtn" Content="退出" Style="{StaticResource TrayActionStyle}"
+                    Foreground="{DynamicResource StatusDanger}" Click="ExitBtn_Click"/>
+        </StackPanel>
+    </Border>
+</Window>

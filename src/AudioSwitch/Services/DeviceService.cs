@@ -212,6 +212,12 @@ public sealed class DeviceService : IDisposable
         try { using var mic = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Multimedia); defaultMicId = mic?.ID; } catch { }
         try { using var spk = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia); defaultSpeakerId = spk?.ID; } catch { }
 
+        // 展示排序：正在使用的设备置顶，其次在线设备，离线设备沉底；
+        // 同组内保持系统枚举顺序（OrderBy 为稳定排序）。
+        // 主窗口列表、托盘菜单、快捷键循环都读这两个列表，在此排一次全局生效。
+        mics = SortForDisplay(mics, defaultMicId);
+        speakers = SortForDisplay(speakers, defaultSpeakerId);
+
         // 修复 M1：清理缓存中已消失的设备（在锁内完成）
         lock (_lock)
         {
@@ -348,6 +354,19 @@ public sealed class DeviceService : IDisposable
         foreach (var kw in blocked)
             if (lower.Contains(kw)) return true;
         return false;
+    }
+
+    /// <summary>
+    /// 按展示需要排序设备列表：当前默认设备置顶 → 在线设备优先 → 离线设备沉底。
+    /// 同组内保持系统枚举顺序（LINQ OrderBy 是稳定排序）。
+    /// 提取为 internal static 以便单元测试覆盖（无需 COM 环境）。
+    /// </summary>
+    internal static List<AudioDevice> SortForDisplay(List<AudioDevice> devices, string? defaultId)
+    {
+        return devices
+            .OrderBy(d => d.Id != defaultId)   // false(0) 排前面：默认设备置顶
+            .ThenBy(d => !d.IsConnected)        // false(0) 排前面：在线设备优先
+            .ToList();
     }
 
     /// <summary>

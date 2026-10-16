@@ -10,6 +10,7 @@ namespace AudioSwitch;
 /// <summary>
 /// 主窗口：组装各个服务模块，处理界面事件。
 /// 设备管理、主题切换、托盘管理、设置面板等逻辑均委托给独立的 Service 类。
+/// v2.0 UI：麦克风/音箱合并为单个列表 + 分段控制器切换角色（见 docs/UI设计方案.md）。
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -18,8 +19,12 @@ public partial class MainWindow : Window
     private TrayService? _trayService;
     private HotkeyManager? _hotkeyManager;
     private SettingsPanelManager? _settingsPanel;
+    private SystemThemeWatcher? _themeWatcher;
     private volatile bool _isExiting = false;
     private System.Threading.EventWaitHandle? _wakeUpEvent;
+
+    /// <summary>当前列表显示的角色（分段控制器切换）。</summary>
+    private DeviceType _currentRole = DeviceType.Microphone;
 
     public MainWindow()
     {
@@ -29,8 +34,10 @@ public partial class MainWindow : Window
         SetupHotkeys();
         SetupAutoStart();
         SetupSettingsPanel();
+        SetupSystemThemeWatcher();
         SetupWakeUpListener();
-        ThemeService.Apply(this);
+        ThemeService.Apply();
+        RefreshDeviceUI();
         _loading = false;
     }
 
@@ -43,23 +50,72 @@ public partial class MainWindow : Window
         _deviceService.StartAutoRefresh();   // 修复 M2：启用热插拔轮询（每 5 秒）
     }
 
+    /// <summary>
+    /// 重建当前角色的设备列表，并同步分段控制器、列表头、空状态。
+    /// </summary>
     private void RefreshDeviceUI()
     {
         _loading = true;
-        MicrophoneList.Items.Clear();
-        SpeakerList.Items.Clear();
-        foreach (var m in _deviceService.Microphones) MicrophoneList.Items.Add(m);
-        foreach (var s in _deviceService.Speakers) SpeakerList.Items.Add(s);
-        HighlightById(_deviceService.Microphones, MicrophoneList, _deviceService.DefaultMicId);
-        HighlightById(_deviceService.Speakers, SpeakerList, _deviceService.DefaultSpeakerId);
-        _loading = false;
+        try
+        {
+            bool isMic = _currentRole == DeviceType.Microphone;
+            var devices = isMic ? _deviceService.Microphones : _deviceService.Speakers;
+            var defaultId = isMic ? _deviceService.DefaultMicId : _deviceService.DefaultSpeakerId;
+
+            var rows = new List<DeviceRowItem>(devices.Count);
+            foreach (var d in devices)
+                rows.Add(new DeviceRowItem(d, d.Id == defaultId, _currentRole));
+
+            DeviceList.ItemsSource = rows;
+
+            // 分段控制器上同时显示两侧当前默认设备：切到另一段前也能看到两边现状
+            var micDefault = _deviceService.Microphones.FirstOrDefault(m => m.Id == _deviceService.DefaultMicId);
+            var spkDefault = _deviceService.Speakers.FirstOrDefault(s => s.Id == _deviceService.DefaultSpeakerId);
+            SetSegmentDeviceName(MicSegmentDevice, micDefault?.Name);
+            SetSegmentDeviceName(SpeakerSegmentDevice, spkDefault?.Name);
+
+            // 列表头
+            ListHeaderText.Text = isMic ? "选择默认麦克风" : "选择默认音箱";
+            DeviceCountText.Text = rows.Count > 0 ? $"{rows.Count} 台设备" : string.Empty;
+
+            // 空状态
+            bool empty = rows.Count == 0;
+            EmptyState.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+            DeviceList.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
+            if (empty)
+            {
+                EmptyStateIcon.Text = isMic ? "\uE720" : "\uE7F5";
+                EmptyStateTitle.Text = isMic ? "没有检测到麦克风" : "没有检测到音箱";
+                EmptyStateDesc.Text = isMic
+                    ? "插入麦克风后会自动出现在这里；也可以在设置里改为「显示全部」"
+                    : "插入音箱后会自动出现在这里；也可以在设置里改为「显示全部」";
+            }
+
+            // 选中当前默认行（-1 表示该角色暂无默认设备）
+            int index = rows.FindIndex(r => r.IsDefault);
+            DeviceList.SelectedIndex = index;
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 
-    private static void HighlightById(List<AudioDevice> devices, System.Windows.Controls.ListBox list, string? id)
+    /// <summary>
+    /// 更新分段控制器上的当前默认设备名；无设备时显示「无可用设备」并降为三级文字色。
+    /// </summary>
+    private static void SetSegmentDeviceName(TextBlock target, string? deviceName)
     {
-        if (id == null) return;
-        int index = devices.FindIndex(d => d.Id == id);
-        if (index >= 0) list.SelectedIndex = index;
+        if (string.IsNullOrEmpty(deviceName))
+        {
+            target.Text = "无可用设备";
+            target.SetResourceReference(ForegroundProperty, "TextTertiary");
+        }
+        else
+        {
+            target.Text = deviceName;
+            target.SetResourceReference(ForegroundProperty, "TextPrimary");
+        }
     }
 
     // ==================== 开机自启动 ====================
@@ -83,10 +139,19 @@ public partial class MainWindow : Window
         _hotkeyManager.HotkeyFailed += msg => Dispatcher.Invoke(() => _trayService?.ShowBalloon("快捷键不可用", msg));
         _hotkeyManager.CycleRequested += (_, args) =>
         {
-            // 修复：直接以 UI 列表的实际项数为准，避免跨线程 Count 不一致
-            var list = args.DeviceType == DeviceType.Microphone ? MicrophoneList : SpeakerList;
-            if (list.Items.Count <= 1) return;
-            list.SelectedIndex = (list.SelectedIndex + 1) % list.Items.Count;
+            // 以设备服务的实际在线设备为准循环，不依赖当前显示的角色
+            var devices = args.DeviceType == DeviceType.Microphone ? _deviceService.Microphones : _deviceService.Speakers;
+            var connected = devices.Where(d => d.IsConnected).ToList();
+            if (connected.Count <= 1) return;
+
+            var defaultId = args.DeviceType == DeviceType.Microphone
+                ? _deviceService.DefaultMicId
+                : _deviceService.DefaultSpeakerId;
+            int index = connected.FindIndex(d => d.Id == defaultId);
+            var next = connected[(index + 1 + connected.Count) % connected.Count];
+
+            TrySetDefault(next.Id);
+            _deviceService.Refresh();   // 立即回读，UI 由 DevicesChanged 刷新
         };
 
         Loaded += (_, _) =>
@@ -103,7 +168,7 @@ public partial class MainWindow : Window
         _settingsPanel = new SettingsPanelManager(
             settingsPanel: SettingsPanel,
             overlay: Overlay,
-            onApplyTheme: () => ThemeService.Apply(this),
+            onApplyTheme: ThemeService.Apply,
             onRefreshHotkeys: () => _hotkeyManager?.Refresh() == true,
             onRefreshDevices: () => { _deviceService.ClearCache(); _deviceService.Refresh(); }  // UI 由 DevicesChanged 事件更新
         );
@@ -114,15 +179,8 @@ public partial class MainWindow : Window
             DisplaySmartRadio, DisplayAllRadio, DisplayUsbBtRadio
         );
 
-        // 修复 M4：快捷键校验失败时提示
-        _settingsPanel.ValidationFailed += msg =>
-        {
-            Dispatcher.Invoke(() =>
-            {
-                MicHotkeyBox.Text = msg;
-                SpeakerHotkeyBox.Text = msg;
-            });
-        };
+        // 快捷键校验失败：气泡提示（胶囊里放长文案会换行破版）
+        _settingsPanel.ValidationFailed += msg => Dispatcher.Invoke(() => _trayService?.ShowBalloon("设置未保存", msg));
 
         _settingsPanel.RecordingStateChanged += () =>
         {
@@ -190,8 +248,41 @@ public partial class MainWindow : Window
             }
         };
 
-        // 快捷键录制时的键盘监听
-        PreviewKeyDown += (sender, e) => _settingsPanel.HandleKeyDown(e);
+        // 键盘流程：Esc 取消录制 → 关闭抽屉 → 关闭窗口；其余按键交给录制逻辑
+        PreviewKeyDown += (sender, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape)
+            {
+                if (_settingsPanel is { IsRecordingMic: true } or { IsRecordingSpeaker: true })
+                {
+                    _settingsPanel.HandleKeyDown(e);   // 取消录制，保留原值
+                    return;
+                }
+                if (_settingsPanel?.IsPanelOpen == true)
+                {
+                    _settingsPanel.ClosePanel();
+                    e.Handled = true;
+                    return;
+                }
+                Close();
+                return;
+            }
+            _settingsPanel?.HandleKeyDown(e);
+        };
+    }
+
+    // ==================== 系统主题监听 ====================
+
+    /// <summary>
+    /// 监听系统深浅色变化：ThemeMode.System 下实时换肤，无需重启（UI设计方案.md 第 6 章）。
+    /// </summary>
+    private void SetupSystemThemeWatcher()
+    {
+        _themeWatcher = new SystemThemeWatcher(this, () =>
+        {
+            if (SettingsManager.Current.Theme == ThemeMode.System)
+                ThemeService.Apply();
+        });
     }
 
     // ==================== 窗口标题栏按钮 ====================
@@ -209,7 +300,7 @@ public partial class MainWindow : Window
     protected override void OnStateChanged(EventArgs e)
     {
         // 5.4: 最大化时切换为"还原"图标
-        MaxBtn.Content = WindowState == WindowState.Maximized ? "" : "";
+        MaxBtn.Content = WindowState == WindowState.Maximized ? "\uE923" : "\uE740";
         base.OnStateChanged(e);
     }
     private void CloseBtn_Click(object sender, RoutedEventArgs e) => Close();
@@ -344,6 +435,7 @@ public partial class MainWindow : Window
         _isExiting = true;
         _hotkeyManager?.Dispose();
         _trayService?.Dispose();
+        _themeWatcher?.Dispose();
         _deviceService.Dispose();
     }
 
@@ -395,20 +487,33 @@ public partial class MainWindow : Window
         }
     }
 
-    // ==================== 设备列表点击切换 ====================
+    // ==================== 设备列表交互 ====================
 
-    private void MicrophoneList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    /// <summary>
+    /// 分段控制器切换角色：重建列表（分段上的设备名始终显示两边现状）。
+    /// </summary>
+    private void RoleSegment_Checked(object sender, RoutedEventArgs e)
     {
         if (_loading) return;
-        if (MicrophoneList.SelectedItem is AudioDevice device && device.IsConnected)
-            TrySetDefault(device.Id);
+        _currentRole = ReferenceEquals(sender, SpeakerSegment) ? DeviceType.Speaker : DeviceType.Microphone;
+        RefreshDeviceUI();
     }
 
-    private void SpeakerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void DeviceList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_loading) return;
-        if (SpeakerList.SelectedItem is AudioDevice device && device.IsConnected)
-            TrySetDefault(device.Id);
+        if (DeviceList.SelectedItem is not DeviceRowItem row) return;
+
+        if (row.IsConnected)
+        {
+            TrySetDefault(row.Id);
+            _deviceService.Refresh();   // 立即回读，UI 由 DevicesChanged 刷新
+        }
+        else
+        {
+            // 离线设备不可设为默认，给出明确反馈而不是静默无响应
+            _trayService?.ShowBalloon("无法切换", $"{row.Name} 当前已断开连接");
+        }
     }
 
     private static void TrySetDefault(string deviceId)

@@ -7,9 +7,9 @@
         mc:Ignorable="d"
         Title="AudioSwitch"
         Icon="Assets/app.ico"
-        Height="520" Width="900" MinWidth="600" MinHeight="400"
+        Height="500" Width="460" MinWidth="380" MinHeight="420"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource WindowBgGradient}"
+        Background="{DynamicResource BgCanvas}"
         FontFamily="Segoe UI Variable, Segoe UI, Microsoft YaHei UI"
         WindowStyle="None"
         ResizeMode="CanResizeWithGrip">
@@ -19,504 +19,13 @@
         <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="0"/>
     </WindowChrome.WindowChrome>
 
-    <Window.Resources>
-
-        <!-- 浅色/深色颜色资源：切换时只需改这里，界面自动跟随 -->
-        <SolidColorBrush x:Key="WindowBg"       Color="#F3F3F3"/>
-        <SolidColorBrush x:Key="PanelBg"         Color="#F3F3F3"/>
-        <SolidColorBrush x:Key="CardBg"          Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="CardBorder"       Color="#E8E8E8"/>
-        <SolidColorBrush x:Key="SettingCardBg"   Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="MainText"         Color="#1B1B1B"/>
-        <SolidColorBrush x:Key="SubText"          Color="#888888"/>
-        <SolidColorBrush x:Key="DisabledText"     Color="#B0B0B0"/>
-        <SolidColorBrush x:Key="HoverBg"          Color="#E9E9E9"/>
-        <SolidColorBrush x:Key="AccentBg"         Color="#0067C0"/>
-        <SolidColorBrush x:Key="InputFieldBg"     Color="#F5F5F5"/>
-
-        <!-- 渐变背景（浅灰 → 稍深灰，subtle depth 感） -->
-        <LinearGradientBrush x:Key="WindowBgGradient" StartPoint="0,0" EndPoint="0,1">
-            <GradientStop Color="#F3F3F3" Offset="0"/>
-            <GradientStop Color="#E8E8E8" Offset="1"/>
-        </LinearGradientBrush>
-
-        <!-- 列表项样式：分层叠加 + 动画，平滑 hover/选中效果 -->
-        <Style x:Key="DeviceListItemStyle" TargetType="ListBoxItem">
-            <Setter Property="Margin" Value="0,3"/>
-            <Setter Property="Padding" Value="14,11"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Foreground" Value="{DynamicResource MainText}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Grid>
-                            <!-- hover 层 -->
-                            <Border x:Name="HoverLayer" CornerRadius="8"
-                                    Background="{DynamicResource HoverBg}" Opacity="0"/>
-                            <!-- 选中层（在 hover 之上，选中优先显示） -->
-                            <Border x:Name="SelectedLayer" CornerRadius="8"
-                                    Background="{DynamicResource AccentBg}" Opacity="0"/>
-                            <!-- 内容层 -->
-                            <Border CornerRadius="8" Padding="{TemplateBinding Padding}">
-                                <ContentPresenter VerticalAlignment="Center"/>
-                            </Border>
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="HoverLayer"
-                                                Storyboard.TargetProperty="Opacity"
-                                                To="1" Duration="0:0:0.18"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="HoverLayer"
-                                                Storyboard.TargetProperty="Opacity"
-                                                To="0" Duration="0:0:0.25"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Foreground" Value="White"/>
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="SelectedLayer"
-                                                Storyboard.TargetProperty="Opacity"
-                                                To="1" Duration="0:0:0.18"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="SelectedLayer"
-                                                Storyboard.TargetProperty="Opacity"
-                                                To="0" Duration="0:0:0.25"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 卡片样式：精致边框 + 柔和阴影 + hover 浮起 -->
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource CardBg}"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="24" ShadowDepth="3" Opacity="0.10" Color="#000000"/>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Effect">
-                        <Setter.Value>
-                            <DropShadowEffect BlurRadius="32" ShadowDepth="6" Opacity="0.18" Color="#000000"/>
-                        </Setter.Value>
-                    </Setter>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- 小节标题样式 -->
-        <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="{DynamicResource MainText}"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
-        </Style>
-
-        <!-- 副标题/说明文字样式 -->
-        <Style x:Key="DescriptionStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="{DynamicResource SubText}"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <!-- 图标样式 -->
-        <Style x:Key="IconStyle" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe Fluent Icons"/>
-            <Setter Property="FontSize" Value="18"/>
-            <Setter Property="Foreground" Value="#0067C0"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="Margin" Value="0,0,10,0"/>
-        </Style>
-
-        <!-- 抽屉面板内的小卡片 -->
-        <Style x:Key="SettingCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SettingCardBg}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-
-        <!-- 圆角按钮样式（主按钮） -->
-        <Style x:Key="RoundedBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentBg}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
-                                BorderThickness="0"
-                                RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            </Border.RenderTransform>
-                            <Border.Effect>
-                                <DropShadowEffect BlurRadius="6" ShadowDepth="1" Opacity="0.08" Color="#000000"/>
-                            </Border.Effect>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                To="#1A85D6" Duration="0:0:0.15"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1.03" Duration="0:0:0.15"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1.03" Duration="0:0:0.15"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                To="#0067C0" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="0.96" Duration="0:0:0.08"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="0.96" Duration="0:0:0.08"/>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                To="#005A9E" Duration="0:0:0.08"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 次要按钮样式（边框按钮） -->
-        <Style x:Key="OutlineBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource MainText}"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="14,7"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource SubText}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bd"
-                                Background="{TemplateBinding Background}"
-                                CornerRadius="8"
-                                Padding="{TemplateBinding Padding}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                RenderTransformOrigin="0.5,0.5">
-                            <Border.RenderTransform>
-                                <ScaleTransform ScaleX="1" ScaleY="1"/>
-                            </Border.RenderTransform>
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                                To="#0067C0" Duration="0:0:0.15"/>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                To="#100067C0" Duration="0:0:0.15"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1.03" Duration="0:0:0.15"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1.03" Duration="0:0:0.15"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
-                                                Duration="0:0:0.2"/>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="0.96" Duration="0:0:0.08"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="0.96" Duration="0:0:0.08"/>
-                                            <ColorAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                To="#100067C0" Duration="0:0:0.08"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
-                                <Trigger.ExitActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
-                                                To="1" Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="Bd"
-                                                Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
-                                                To="1" Duration="0:0:0.2"/>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.ExitActions>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 设备列表项模板：断开的设备显示灰色，在线设备正常颜色 -->
-        <DataTemplate x:Key="DeviceItemTemplate">
-            <TextBlock Text="{Binding Name}" VerticalAlignment="Center">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsConnected}" Value="False">
-                                <Setter Property="Foreground" Value="{DynamicResource DisabledText}"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-        </DataTemplate>
-
-        <!-- 现代滚动条样式：细条、圆角、hover 变宽变色 -->
-        <Style TargetType="ScrollBar">
-            <Setter Property="Width" Value="6"/>
-            <Setter Property="MinWidth" Value="6"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ScrollBar">
-                        <Border Width="{TemplateBinding Width}"
-                                Background="#06000000"
-                                CornerRadius="3"
-                                Padding="2">
-                            <Track x:Name="PART_Track" IsDirectionReversed="True">
-                                <Track.Thumb>
-                                    <Thumb x:Name="Thumb">
-                                        <Thumb.Template>
-                                            <ControlTemplate TargetType="Thumb">
-                                                <Border x:Name="ThumbBorder"
-                                                        CornerRadius="3"
-                                                        Background="{DynamicResource SubText}"
-                                                        Margin="0"/>
-                                                <ControlTemplate.Triggers>
-                                                    <DataTrigger Binding="{Binding IsMouseOver, ElementName=Thumb}" Value="True">
-                                                        <Setter TargetName="ThumbBorder" Property="Background" Value="{DynamicResource MainText}"/>
-                                                    </DataTrigger>
-                                                </ControlTemplate.Triggers>
-                                            </ControlTemplate>
-                                        </Thumb.Template>
-                                    </Thumb>
-                                </Track.Thumb>
-                            </Track>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="Orientation" Value="Horizontal">
-                                <Setter Property="Width" Value="Auto"/>
-                                <Setter Property="Height" Value="6"/>
-                                <Setter Property="MinHeight" Value="6"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 窗口控制按钮样式（最小化/最大化） -->
-        <Style x:Key="WindowBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource SubText}"/>
-            <Setter Property="FontFamily" Value="Segoe Fluent Icons"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Width" Value="44"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg" Background="Transparent" CornerRadius="0">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource HoverBg}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- 关闭按钮样式（hover 时红色） -->
-        <Style x:Key="CloseBtnStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="{DynamicResource SubText}"/>
-            <Setter Property="FontFamily" Value="Segoe Fluent Icons"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Width" Value="44"/>
-            <Setter Property="Height" Value="36"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Bg" Background="Transparent" CornerRadius="0">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="#C42B1C"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- ScrollViewer 保留默认模板；隐式样式让 RadioButton/CheckBox/TextBox 文字跟随深色主题 -->
-        <Style TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{DynamicResource MainText}"/>
-        </Style>
-        <Style TargetType="CheckBox">
-            <Setter Property="Foreground" Value="{DynamicResource MainText}"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="CheckBox">
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Border x:Name="Track" Width="40" Height="22"
-                                    CornerRadius="11"
-                                    Background="{DynamicResource SubText}"
-                                    VerticalAlignment="Center"
-                                    Margin="0,0,10,0">
-                                <Border x:Name="Thumb" Width="16" Height="16"
-                                        CornerRadius="8"
-                                        Background="White"
-                                        HorizontalAlignment="Left"
-                                        Margin="3,0,0,0"/>
-                            </Border>
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource AccentBg}"/>
-                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
-                                <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style TargetType="TextBox">
-            <Setter Property="Foreground" Value="{DynamicResource MainText}"/>
-        </Style>
-
-    </Window.Resources>
-
-    <!-- 最外层：标题栏 + 主内容 + 抽屉面板 -->
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="38"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- 自定义标题栏 -->
+        <!-- ==================== 自定义标题栏 ==================== -->
         <Border Grid.Row="0" Background="Transparent" Padding="8,4"
                 MouseLeftButtonDown="TitleBar_MouseDown">
             <Grid>
@@ -525,126 +34,165 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="AudioSwitch" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{DynamicResource MainText}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                           Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button x:Name="MinBtn" Content="&#xE921;" Click="MinBtn_Click"
-                            Style="{StaticResource WindowBtnStyle}"/>
+                            Style="{StaticResource WindowButtonStyle}"/>
                     <Button x:Name="MaxBtn" Content="&#xE740;" Click="MaxBtn_Click"
-                            Style="{StaticResource WindowBtnStyle}"/>
+                            Style="{StaticResource WindowButtonStyle}"/>
                     <Button x:Name="CloseBtn" Content="&#xE8BB;" Click="CloseBtn_Click"
-                            Style="{StaticResource CloseBtnStyle}"/>
+                            Style="{StaticResource CloseCaptionButtonStyle}"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- 主内容 -->
-        <Grid Grid.Row="1" Margin="24,0,24,24">
+        <!-- ==================== 主内容 ==================== -->
+        <Grid Grid.Row="1" Margin="16,4,16,16">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition/>
-                <ColumnDefinition/>
-            </Grid.ColumnDefinitions>
 
-            <!-- 左列：麦克风卡片 -->
-            <Border Grid.Row="0" Grid.Column="0" Margin="0,0,10,0" Style="{StaticResource CardStyle}" Padding="20">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="&#xE720;" Style="{StaticResource IconStyle}"/>
-                        <StackPanel>
-                            <TextBlock Text="麦克风（输入）" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="点击切换默认麦克风" Style="{StaticResource DescriptionStyle}"/>
-                        </StackPanel>
+            <!-- 分段控制器：角色 + 该角色当前默认设备，两边现状一屏可见 -->
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
+
+                <RadioButton x:Name="MicSegment" GroupName="AudioRole" IsChecked="True"
+                             Style="{StaticResource RoleSegmentStyle}"
+                             Checked="RoleSegment_Checked">
+                    <StackPanel>
+                        <TextBlock Text="麦克风" FontSize="12" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=RadioButton}}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock x:Name="MicSegmentDevice" Text="读取中…" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                     </StackPanel>
-                    <ListBox Grid.Row="1" x:Name="MicrophoneList"
-                             ItemTemplate="{StaticResource DeviceItemTemplate}"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             ItemContainerStyle="{StaticResource DeviceListItemStyle}"
-                             SelectionChanged="MicrophoneList_SelectionChanged"/>
-                </Grid>
-            </Border>
+                </RadioButton>
 
-            <!-- 右列：音箱卡片 -->
-            <Border Grid.Row="0" Grid.Column="1" Margin="10,0,0,0" Style="{StaticResource CardStyle}" Padding="20">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock Text="&#xE7F5;" Style="{StaticResource IconStyle}"/>
-                        <StackPanel>
-                            <TextBlock Text="音箱（输出）" Style="{StaticResource SectionTitleStyle}"/>
-                            <TextBlock Text="点击切换默认输出设备" Style="{StaticResource DescriptionStyle}"/>
-                        </StackPanel>
+                <RadioButton x:Name="SpeakerSegment" Grid.Column="2" GroupName="AudioRole"
+                             Style="{StaticResource RoleSegmentStyle}"
+                             Checked="RoleSegment_Checked">
+                    <StackPanel>
+                        <TextBlock Text="音箱" FontSize="12" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=RadioButton}}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentText}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock x:Name="SpeakerSegmentDevice" Text="读取中…" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                     </StackPanel>
-                    <ListBox Grid.Row="1" x:Name="SpeakerList"
-                             ItemTemplate="{StaticResource DeviceItemTemplate}"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             ItemContainerStyle="{StaticResource DeviceListItemStyle}"
-                             SelectionChanged="SpeakerList_SelectionChanged"/>
-                </Grid>
-            </Border>
+                </RadioButton>
+            </Grid>
 
-            <!-- 底部：开机自启动开关 + 设置按钮 -->
-            <Grid Grid.Row="1" Grid.ColumnSpan="2" Margin="4,16,4,0">
+            <!-- 列表头：当前角色 + 设备数 -->
+            <Grid Grid.Row="1" Margin="4,0,4,8">
+                <TextBlock x:Name="ListHeaderText" Text="选择默认麦克风" FontSize="13"
+                           Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center"/>
+                <TextBlock x:Name="DeviceCountText" Text="" FontSize="12"
+                           Foreground="{DynamicResource TextTertiary}"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- 设备列表（单列，点击即切换） -->
+            <ListBox Grid.Row="2" x:Name="DeviceList"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     ItemTemplate="{StaticResource DeviceRowTemplate}"
+                     ItemContainerStyle="{StaticResource DeviceListItemStyle}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     SelectionChanged="DeviceList_SelectionChanged"/>
+
+            <!-- 空状态 -->
+            <StackPanel Grid.Row="2" x:Name="EmptyState"
+                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                <Border Width="56" Height="56" CornerRadius="28"
+                        Background="{DynamicResource BgSurfaceHover}" HorizontalAlignment="Center">
+                    <TextBlock x:Name="EmptyStateIcon" Text="&#xE720;" FontFamily="Segoe Fluent Icons"
+                               FontSize="24" Foreground="{DynamicResource TextTertiary}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock x:Name="EmptyStateTitle" Text="没有检测到麦克风" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimary}"
+                           HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                <TextBlock x:Name="EmptyStateDesc" Text="插入设备后会自动出现在这里"
+                           FontSize="12" Foreground="{DynamicResource TextSecondary}"
+                           HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                           MaxWidth="300" Margin="0,4,0,0"/>
+            </StackPanel>
+
+            <!-- 底栏：开机自启动开关 + 设置入口 -->
+            <Grid Grid.Row="3" Margin="4,12,4,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <CheckBox Grid.Column="0" x:Name="AutoStartCheckBox"
                           Content="开机自动启动"
-                          FontSize="13"
-                          Foreground="{DynamicResource MainText}"
+                          Style="{StaticResource ToggleStyle}"
                           VerticalAlignment="Center"
                           Checked="AutoStartCheckBox_Changed"
                           Unchecked="AutoStartCheckBox_Changed"/>
                 <Button Grid.Column="1" x:Name="SettingsBtn"
-                        Style="{StaticResource OutlineBtnStyle}"
+                        Style="{StaticResource OutlineButtonStyle}"
                         Click="SettingsBtn_Click">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" Foreground="{DynamicResource MainText}"/>
-                        <TextBlock Text="设置" FontFamily="Segoe UI" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource MainText}"/>
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                                   Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="设置" FontSize="13" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </Grid>
         </Grid>
 
-        <!-- 半透明遮罩（抽屉打开时覆盖主内容） -->
+        <!-- ==================== 半透明遮罩（抽屉打开时覆盖主内容） ==================== -->
         <Border x:Name="Overlay"
                 Grid.Row="1"
                 Background="#66000000"
                 Visibility="Collapsed"
                 MouseLeftButtonDown="Overlay_MouseLeftButtonDown"/>
 
-        <!-- 右侧抽屉面板（初始在屏幕外，点击设置后滑入） -->
+        <!-- ==================== 右侧设置抽屉（340px，初始在屏幕外） ==================== -->
         <Border x:Name="SettingsPanel"
                 Grid.Row="1"
-                Width="380"
+                Width="340"
                 HorizontalAlignment="Right"
-                Background="{DynamicResource PanelBg}"
+                Background="{DynamicResource BgCanvas}"
                 Visibility="Collapsed"
                 RenderTransformOrigin="0,0">
             <Border.RenderTransform>
-                <TranslateTransform X="380"/>  <!-- 与 SettingsPanelManager.DrawerWidth 保持一致 -->
+                <TranslateTransform X="340"/>  <!-- 与 SettingsPanelManager.DrawerWidth 保持一致 -->
             </Border.RenderTransform>
             <Border.Effect>
                 <DropShadowEffect BlurRadius="24" ShadowDepth="-4" Opacity="0.15" Color="#000000"/>
             </Border.Effect>
 
-            <Grid Margin="24">
+            <Grid Margin="20">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -652,81 +200,159 @@
                 </Grid.RowDefinitions>
 
                 <!-- 抽屉标题 -->
-                <Grid Grid.Row="0" Margin="0,0,0,20">
-                    <TextBlock Text="设置" FontSize="22" FontWeight="SemiBold" Foreground="{DynamicResource MainText}" VerticalAlignment="Center"/>
+                <Grid Grid.Row="0" Margin="0,0,0,16">
+                    <TextBlock Text="设置" Style="{StaticResource TextDisplay}" VerticalAlignment="Center"/>
                     <Button x:Name="CloseSettingsBtn"
                             HorizontalAlignment="Right"
                             Click="CloseSettingsBtn_Click"
-                            Style="{StaticResource WindowBtnStyle}">
-                        <TextBlock Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="16" Foreground="{DynamicResource SubText}"/>
+                            Style="{StaticResource WindowButtonStyle}">
+                        <TextBlock Text="&#xE711;" FontFamily="Segoe Fluent Icons" FontSize="14"
+                                   Foreground="{DynamicResource TextSecondary}"/>
                     </Button>
                 </Grid>
 
                 <!-- 抽屉内容（可滚动） -->
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,4,0">
                     <StackPanel>
-                        <!-- 麦克风快捷键设置 -->
-                        <Border Style="{StaticResource SettingCardStyle}">
+
+                        <!-- ========== 切换快捷键（高频，置顶；一行内联显示） ========== -->
+                        <TextBlock Text="切换快捷键" Style="{StaticResource TextCaption}" Margin="4,0,0,8"/>
+                        <Border Style="{StaticResource GroupCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="麦克风切换快捷键" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MainText}" Margin="0,0,0,6"/>
-                                <TextBlock Text="按下组合键后，自动切换到下一个麦克风" FontSize="12" Foreground="{DynamicResource SubText}" Margin="0,0,0,10"/>
-                                <Grid>
+                                <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="MicHotkeyBox" Grid.Column="0" Padding="10,8" FontSize="14" IsReadOnly="True" Background="{DynamicResource InputFieldBg}" BorderThickness="0"/>
-                                    <Button x:Name="MicHotkeyBtn" Grid.Column="1" Content="修改" Margin="8,0,0,0" Style="{StaticResource OutlineBtnStyle}" FontSize="12"/>
+                                    <TextBlock Grid.Column="0" Text="麦克风" FontSize="13"
+                                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource HotkeyCapsuleStyle}">
+                                        <TextBlock x:Name="MicHotkeyBox" Text="Ctrl + Alt + F9" FontSize="13"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Border>
+                                    <Button Grid.Column="2" x:Name="MicHotkeyBtn" Content="修改" FontSize="12"
+                                            Padding="10,5" Style="{StaticResource OutlineButtonStyle}"/>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="音箱" FontSize="13"
+                                               Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource HotkeyCapsuleStyle}">
+                                        <TextBlock x:Name="SpeakerHotkeyBox" Text="Ctrl + Alt + F10" FontSize="13"
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Border>
+                                    <Button Grid.Column="2" x:Name="SpeakerHotkeyBtn" Content="修改" FontSize="12"
+                                            Padding="10,5" Style="{StaticResource OutlineButtonStyle}"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
 
-                        <!-- 音箱快捷键设置 -->
-                        <Border Style="{StaticResource SettingCardStyle}">
+                        <!-- ========== 外观主题 ========== -->
+                        <TextBlock Text="外观主题" Style="{StaticResource TextCaption}" Margin="4,0,0,8"/>
+                        <Border Style="{StaticResource GroupCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="音箱切换快捷键" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MainText}" Margin="0,0,0,6"/>
-                                <TextBlock Text="按下组合键后，自动切换到下一个音箱" FontSize="12" Foreground="{DynamicResource SubText}" Margin="0,0,0,10"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="SpeakerHotkeyBox" Grid.Column="0" Padding="10,8" FontSize="14" IsReadOnly="True" Background="{DynamicResource InputFieldBg}" BorderThickness="0"/>
-                                    <Button x:Name="SpeakerHotkeyBtn" Grid.Column="1" Content="修改" Margin="8,0,0,0" Style="{StaticResource OutlineBtnStyle}" FontSize="12"/>
-                                </Grid>
+                                <RadioButton x:Name="ThemeSystemRadio" GroupName="ThemeMode"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="跟随系统" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="随 Windows 深浅色自动切换" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="ThemeLightRadio" GroupName="ThemeMode"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="浅色" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="始终使用浅色界面" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="ThemeDarkRadio" GroupName="ThemeMode"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="深色" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="始终使用深色界面" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
                             </StackPanel>
                         </Border>
 
-                        <!-- 主题设置 -->
-                        <Border Style="{StaticResource SettingCardStyle}">
+                        <!-- ========== 设备显示范围 ========== -->
+                        <TextBlock Text="设备显示范围" Style="{StaticResource TextCaption}" Margin="4,0,0,8"/>
+                        <Border Style="{StaticResource GroupCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="外观主题" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MainText}" Margin="0,0,0,6"/>
-                                <TextBlock Text="选择深色或浅色主题" FontSize="12" Foreground="{DynamicResource SubText}" Margin="0,0,0,10"/>
-                                <RadioButton x:Name="ThemeSystemRadio" Content="跟随系统" GroupName="ThemeMode" FontSize="13" Margin="0,0,0,6"/>
-                                <RadioButton x:Name="ThemeLightRadio"   Content="浅色"     GroupName="ThemeMode" FontSize="13" Margin="0,0,0,6"/>
-                                <RadioButton x:Name="ThemeDarkRadio"    Content="深色"     GroupName="ThemeMode" FontSize="13"/>
+                                <RadioButton x:Name="DisplaySmartRadio" GroupName="DisplayMode"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="智能模式" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="隐藏混音回环、显卡 HDMI 等系统杂项" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="DisplayAllRadio" GroupName="DisplayMode"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="显示全部设备" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="列出所有音频端点，包括虚拟声卡" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="DisplayUsbBtRadio" GroupName="DisplayMode"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="仅 USB 与蓝牙" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="只显示外接设备" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
                             </StackPanel>
                         </Border>
 
-                        <!-- 设备显示范围设置 -->
-                        <Border Style="{StaticResource SettingCardStyle}">
+                        <!-- ========== 关闭按钮行为 ========== -->
+                        <TextBlock Text="关闭按钮行为" Style="{StaticResource TextCaption}" Margin="4,0,0,8"/>
+                        <Border Style="{StaticResource GroupCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="设备显示范围" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MainText}" Margin="0,0,0,6"/>
-                                <TextBlock Text="控制列表里显示哪些设备" FontSize="12" Foreground="{DynamicResource SubText}" Margin="0,0,0,10"/>
-                                <RadioButton x:Name="DisplaySmartRadio"   Content="智能模式（推荐）" GroupName="DisplayMode" FontSize="13" Margin="0,0,0,6"/>
-                                <RadioButton x:Name="DisplayAllRadio"     Content="显示全部设备"     GroupName="DisplayMode" FontSize="13" Margin="0,0,0,6"/>
-                                <RadioButton x:Name="DisplayUsbBtRadio"   Content="只看 USB 和蓝牙"  GroupName="DisplayMode" FontSize="13"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- 关闭行为设置 -->
-                        <Border Style="{StaticResource SettingCardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="关闭按钮行为" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource MainText}" Margin="0,0,0,6"/>
-                                <TextBlock Text="点击窗口右上角关闭按钮时" FontSize="12" Foreground="{DynamicResource SubText}" Margin="0,0,0,10"/>
-                                <RadioButton x:Name="CloseAskRadio" Content="每次询问" GroupName="CloseBehavior" FontSize="13" Margin="0,0,0,6"/>
-                                <RadioButton x:Name="CloseTrayRadio" Content="最小化到托盘" GroupName="CloseBehavior" FontSize="13" Margin="0,0,0,6"/>
-                                <RadioButton x:Name="CloseExitRadio" Content="完全退出" GroupName="CloseBehavior" FontSize="13"/>
+                                <RadioButton x:Name="CloseAskRadio" GroupName="CloseBehavior"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="每次询问" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="点关闭按钮时弹出选择框" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="CloseTrayRadio" GroupName="CloseBehavior"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="最小化到托盘" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="隐藏到托盘继续运行" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="CloseExitRadio" GroupName="CloseBehavior"
+                                             Style="{StaticResource OptionCardStyle}">
+                                    <StackPanel>
+                                        <TextBlock Text="完全退出" FontSize="13" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Text="关闭即结束程序" FontSize="12"
+                                                   Foreground="{DynamicResource TextSecondary}" Margin="0,1,0,0"/>
+                                    </StackPanel>
+                                </RadioButton>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -734,8 +360,9 @@
 
                 <!-- 抽屉底部按钮 -->
                 <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-                    <Button x:Name="ResetBtn" Content="恢复默认" Style="{StaticResource OutlineBtnStyle}" FontSize="12" Margin="0,0,8,0"/>
-                    <Button x:Name="SaveBtn" Content="保存" Style="{StaticResource RoundedBtnStyle}" FontSize="12"/>
+                    <Button x:Name="ResetBtn" Content="恢复默认" Style="{StaticResource OutlineButtonStyle}"
+                            FontSize="12" Margin="0,0,8,0"/>
+                    <Button x:Name="SaveBtn" Content="保存" Style="{StaticResource PrimaryButtonStyle}" FontSize="12"/>
                 </StackPanel>
             </Grid>
         </Border>
