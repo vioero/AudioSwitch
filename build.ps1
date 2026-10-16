@@ -1,4 +1,4 @@
-# AudioSwitch 打包脚本：版本号从 csproj 读取，发布便携版并编译安装包
+﻿# AudioSwitch 打包脚本：版本号从 csproj 读取，发布便携版并编译安装包
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $csproj = Join-Path $root 'src\AudioSwitch\AudioSwitch.csproj'
@@ -10,7 +10,9 @@ if (-not $env:ProgramFiles) { $env:ProgramFiles = 'C:\Program Files' }
 if (-not $env:ProgramW6432) { $env:ProgramW6432 = 'C:\Program Files' }
 
 # 从 csproj 读取唯一版本源
-[xml]$proj = Get-Content -LiteralPath $csproj
+# 注意：csproj 含中文且无 BOM，Windows PowerShell 5.1 默认按 GBK 读取会乱码，
+# 必须显式 -Encoding UTF8；-Raw 保证 [xml] 转换拿到完整字符串而非行数组
+[xml]$proj = Get-Content -LiteralPath $csproj -Raw -Encoding UTF8
 $version = $proj.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 if (-not $version) { throw "无法从 $csproj 读取 <Version>" }
 $versionFull = if ($version -match '^\d+\.\d+\.\d+$') { "$version.0" } else { $version }
