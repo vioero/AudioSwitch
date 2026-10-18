@@ -3,6 +3,7 @@ bin/
 obj/
 publish/
 installer/redist/*.exe
+installer/redist/
 installer/Output/
 
 # 但保留安装脚本本身

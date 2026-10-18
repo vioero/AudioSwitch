@@ -58,4 +58,4 @@ Name: "{autodesktop}\AudioSwitch"; Filename: "{app}\AudioSwitch.exe"; Tasks: des
 
 [Registry]
 ; 仅在用户勾选"开机自动启动"时写入 Run 项
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "AudioSwitch"; ValueData: "\"{app}\AudioSwitch.exe\""; Tasks: autostart; Flags: uninsdeletevalue
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "AudioSwitch"; ValueData: """{app}\AudioSwitch.exe"""; Tasks: autostart; Flags: uninsdeletevalue

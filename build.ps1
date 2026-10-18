@@ -31,13 +31,22 @@ $iscc = Get-Command 'iscc' -ErrorAction SilentlyContinue
 if (-not $iscc) {
     $candidates = @(
         "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-        "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+        "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
     ) | Where-Object { $_ -and (Test-Path $_) }
     if ($candidates) { $iscc = $candidates[0] }
 }
 if (-not $iscc) {
     Write-Warning '未找到 Inno Setup (ISCC)，只生成了便携版。安装包请安装 Inno Setup 后重跑。'
     exit 0
+}
+
+# 简体中文语言文件属于 Inno Setup 非官方翻译，官方安装包不附带，需手动放入 ISCC 所在 Languages 目录，
+# 否则编译会在 [Languages] 段报 "Couldn't open include file" —— 这里提前检查并给出明确提示
+$isccPath = if ($iscc -is [System.Management.Automation.CommandInfo]) { $iscc.Source } else { $iscc }
+$langFile = Join-Path (Split-Path -Parent $isccPath) 'Languages\ChineseSimplified.isl'
+if (-not (Test-Path -LiteralPath $langFile)) {
+    throw "未找到中文语言文件 $langFile 。请从 https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Unofficial/ChineseSimplified.isl 下载后放入该 Languages 目录（官方安装包不自带简体中文语言包）。"
 }
 
 Write-Host '==> ISCC'
